@@ -21,10 +21,45 @@ const UserSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  lastActiveDate: {
+    type: String,
+    default: () => new Date().toISOString().split('T')[0],
+  },
   totalWorkouts: {
     type: Number,
     default: 0,
   },
+  height: {
+    type: Number,
+    default: 175,
+  },
+  weight: {
+    type: Number,
+    default: 70,
+  },
+  goal: {
+    type: String,
+    enum: ['bulk', 'cut', 'maintain'],
+    default: 'maintain',
+  },
+  targetCaloriesOverride: {
+    type: Number,
+    default: null,
+  },
+  favoriteFoods: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Food',
+  }],
+  recentFoods: [{
+    foodId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Food',
+    },
+    lastUsed: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

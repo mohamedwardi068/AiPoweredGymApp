@@ -68,6 +68,7 @@ export interface MealCard {
   fat: number;
   ingredients: string[];
   instructions: string[];
+  prepTime?: string;
 }
 
 export interface TipCard {
@@ -93,6 +94,10 @@ export interface UserProfile {
   streak: number;
   totalWorkouts: number;
   goals: FitnessGoal[];
+  height?: number;
+  weight?: number;
+  goal?: 'bulk' | 'cut' | 'maintain';
+  targetCaloriesOverride?: number | null;
 }
 
 export interface FitnessGoal {
@@ -119,6 +124,17 @@ export interface PlannedWorkout {
   name: string;
   exercises: WorkoutExercise[];
   duration: number;
+}
+
+export interface FoodItem {
+  _id: string;
+  name: string;
+  category: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: string;
 }
 
 export interface NutritionEntry {

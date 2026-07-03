@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import crypto from 'crypto';
 import Conversation from '../models/Conversation.js';
+import User from '../models/User.js';
 import { getCardsForResponse, getMockResponse } from '../utils/aiHelper.js';
 
 export async function handleChat(req, res) {
@@ -54,6 +55,13 @@ export async function handleChat(req, res) {
   if (apiKey) {
     try {
       console.log('Using Gemini API for response...');
+      
+      // Fetch user profile from database to get context
+      const user = await User.findById(userId);
+      const height = user?.height || 175;
+      const weight = user?.weight || 70;
+      const goal = user?.goal || 'maintain';
+
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
@@ -63,6 +71,11 @@ Your expertise covers:
 2. Explaining correct exercise forms, tips, and common mistakes.
 3. Calculating nutrition details, calories, macros, and creating meal plans.
 4. Explaining fitness terms like progressive overload, muscle recovery, and hypertrophy.
+
+User Profile Context (Use this context internally for all calculations and recommendations, but do NOT output it raw to the user):
+- Height: ${height} cm
+- Weight: ${weight} kg
+- Goal: ${goal} (For 'bulk' supply calorie surplus, for 'cut' supply calorie deficit, for 'maintain' supply maintenance calories).
 
 Be structured, write clean markdown with bullet points where appropriate, and keep your tone highly motivational and professional.
 
@@ -98,7 +111,7 @@ For a single meal or food item:
   "servings": 1
 }
 
-For a meal plan or multiple meals, output a JSON array of meal objects:
+For a meal plan or multiple meals, output a JSON array of meal objects (each MUST contain prepTime, ingredients with quantities, instructions, name, calories, macros):
 [
   {
     "type": "meal",
@@ -108,8 +121,9 @@ For a meal plan or multiple meals, output a JSON array of meal objects:
     "protein": 28,
     "carbs": 52,
     "fat": 10,
-    "ingredients": ["1 cup oats", "etc"],
-    "instructions": ["Mix oats", "etc"]
+    "ingredients": ["150g chicken breast", "1 cup cooked rice", "etc"],
+    "instructions": ["Chop chicken", "Cook rice", "etc"],
+    "prepTime": "15 mins"
   }
 ]
 

@@ -19,12 +19,13 @@ interface MessageItemProps {
 }
 
 export function MessageItem({ message, onLike }: MessageItemProps) {
-  const { validateWorkout, validateNutrition, updateMessageCard, setActiveEditContext } = useApp();
+  const { validateWorkout, validateNutrition, updateMessageCard, setActiveEditContext, sendMessage } = useApp();
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
   const [showPlanValidation, setShowPlanValidation] = useState(false);
   const [pendingWorkoutCard, setPendingWorkoutCard] = useState<any>(null);
   const [validatedCardIds, setValidatedCardIds] = useState<string[]>([]);
+  const [savedMealCardIds, setSavedMealCardIds] = useState<string[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { autoScheduleWorkout } = useApp();
 
@@ -160,6 +161,7 @@ export function MessageItem({ message, onLike }: MessageItemProps) {
         {message.cards && message.cards.length > 0 && (
           <div className="space-y-3 mt-3 w-full">
             {message.cards.map((card) => {
+              const isMealSaved = savedMealCardIds.includes(card.id);
               switch (card.type) {
                 case 'workout':
                   const isValidated = validatedCardIds.includes(card.id);
@@ -197,16 +199,38 @@ export function MessageItem({ message, onLike }: MessageItemProps) {
                   return (
                     <div key={card.id} className="space-y-2">
                       <NutritionCard data={card.data as any} />
-                      <div className="flex justify-end pr-1">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => validateNutrition(card.data)}
-                          className="hover:border-accent-green/50 hover:text-accent-green text-xs"
-                          icon={<Check className="w-3.5 h-3.5" />}
-                        >
-                          Validate Nutrition Plan
-                        </Button>
+                      <div className="flex justify-end gap-2 pr-1">
+                        {isMealSaved ? (
+                          <div className="flex items-center gap-1.5 text-accent-green bg-accent-green/10 px-3 py-1.5 rounded-lg text-xs font-semibold border border-accent-green/20">
+                            <Check className="w-3.5 h-3.5" />
+                            Saved to Log
+                          </div>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                sendMessage(`Please regenerate the food suggestion: "${(card.data as any).name || 'this food'}" with different ingredients or macros.`);
+                              }}
+                              className="text-xs text-dark-300 hover:text-white"
+                            >
+                              Regenerate
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={async () => {
+                                await validateNutrition(card.data);
+                                setSavedMealCardIds(prev => [...prev, card.id]);
+                              }}
+                              className="text-xs"
+                              icon={<Check className="w-3.5 h-3.5" />}
+                            >
+                              Save Meal
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -214,16 +238,38 @@ export function MessageItem({ message, onLike }: MessageItemProps) {
                   return (
                     <div key={card.id} className="space-y-2">
                       <MealCard data={card.data as any} />
-                      <div className="flex justify-end pr-1">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => validateNutrition(card.data)}
-                          className="hover:border-accent-green/50 hover:text-accent-green text-xs"
-                          icon={<Check className="w-3.5 h-3.5" />}
-                        >
-                          Validate Meal Plan
-                        </Button>
+                      <div className="flex justify-end gap-2 pr-1">
+                        {isMealSaved ? (
+                          <div className="flex items-center gap-1.5 text-accent-green bg-accent-green/10 px-3 py-1.5 rounded-lg text-xs font-semibold border border-accent-green/20">
+                            <Check className="w-3.5 h-3.5" />
+                            Saved to Log
+                          </div>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                sendMessage(`Please regenerate the meal plan: "${(card.data as any).name || 'this meal'}" with different ingredients or a different macro layout.`);
+                              }}
+                              className="text-xs text-dark-300 hover:text-white"
+                            >
+                              Regenerate Meal
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={async () => {
+                                await validateNutrition(card.data);
+                                setSavedMealCardIds(prev => [...prev, card.id]);
+                              }}
+                              className="text-xs"
+                              icon={<Check className="w-3.5 h-3.5" />}
+                            >
+                              Save Meal
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

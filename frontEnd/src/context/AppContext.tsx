@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Conversation, Message, Page, MessageCard, UserProfile } from '../types';
+import { Conversation, Message, Page, MessageCard, UserProfile, FoodItem } from '../types';
 import { AI_RESPONSES, MOCK_WORKOUT_PLANS } from '../constants';
 
 interface AppContextType {
@@ -25,9 +25,17 @@ interface AppContextType {
   validatedWorkouts: any[];
   validatedMeals: any[];
   validateWorkout: (workout: any, startDate?: string, preventNavigation?: boolean) => Promise<any>;
-  validateNutrition: (meal: any) => Promise<void>;
+  validateNutrition: (meal: any, date?: string) => Promise<void>;
+  updateValidatedNutrition: (id: string, meal: any) => Promise<void>;
   deleteValidatedWorkout: (id: string) => Promise<void>;
   deleteValidatedNutrition: (id: string) => Promise<void>;
+  updateProfile: (profileData: Partial<UserProfile>) => Promise<void>;
+  searchFoods: (query: string, category: string) => Promise<FoodItem[]>;
+  getFavorites: () => Promise<FoodItem[]>;
+  addFavorite: (foodId: string) => Promise<void>;
+  removeFavorite: (foodId: string) => Promise<void>;
+  getRecents: () => Promise<FoodItem[]>;
+  addRecent: (foodId: string) => Promise<void>;
   workoutSchedule: any[];
   scheduleWorkout: (date: string, workoutPlanId: string) => Promise<void>;
   unscheduleWorkout: (scheduleId: string) => Promise<void>;
@@ -64,7 +72,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return {
         text: AI_RESPONSES.workout_4day,
         cards: [
-          { id: crypto.randomUUID(), type: 'workout', data: MOCK_WORKOUT_PLANS[1] } // Using Upper Lower 4-day split from constants
+          { id: crypto.randomUUID(), type: 'workout', data: MOCK_WORKOUT_PLANS[1] as any } // Using Upper Lower 4-day split from constants
         ],
       };
     }
@@ -655,20 +663,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const validateNutrition = useCallback(async (meal: any) => {
+  const validateNutrition = useCallback(async (meal: any, date?: string) => {
     try {
       const token = localStorage.getItem('gymbot_token');
       if (!token) return;
 
       const payload = {
         name: meal.name || meal.title || 'AI Meal Plan',
-        type: meal.type || 'snack',
+        type: meal.type || meal.mealType || 'snack',
         calories: meal.calories,
         protein: meal.protein,
         carbs: meal.carbs,
         fat: meal.fat,
         ingredients: meal.ingredients || [],
-        instructions: meal.instructions || []
+        instructions: meal.instructions || [],
+        createdAt: date || undefined
       };
 
       const response = await fetch('http://localhost:5000/api/nutrition/plans', {
@@ -690,6 +699,177 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error validating nutrition:', error);
+    }
+  }, []);
+
+  const updateValidatedNutrition = useCallback(async (id: string, meal: any) => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return;
+
+      const response = await fetch(`http://localhost:5000/api/nutrition/plans/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(meal),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setValidatedMeals(prev => prev.map(m => m._id === id ? data : m));
+      }
+    } catch (error) {
+      console.error('Error updating nutrition plan:', error);
+    }
+  }, []);
+
+  const updateProfile = useCallback(async (profileData: Partial<UserProfile>) => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:5000/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(prev => prev ? {
+          ...prev,
+          height: data.height,
+          weight: data.weight,
+          goal: data.goal,
+          targetCaloriesOverride: data.targetCaloriesOverride
+        } : null);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
+  }, []);
+
+  const searchFoods = useCallback(async (query: string, category: string): Promise<FoodItem[]> => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return [];
+
+      const url = new URL('http://localhost:5000/api/nutrition/foods');
+      if (query) url.searchParams.append('search', query);
+      if (category) url.searchParams.append('category', category);
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+      return [];
+    } catch (error) {
+      console.error('Error searching foods:', error);
+      return [];
+    }
+  }, []);
+
+  const getFavorites = useCallback(async (): Promise<FoodItem[]> => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return [];
+
+      const response = await fetch('http://localhost:5000/api/nutrition/foods/favorites', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+      return [];
+    } catch (error) {
+      console.error('Error getting favorites:', error);
+      return [];
+    }
+  }, []);
+
+  const addFavorite = useCallback(async (foodId: string) => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return;
+
+      await fetch('http://localhost:5000/api/nutrition/foods/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ foodId }),
+      });
+    } catch (error) {
+      console.error('Error adding favorite:', error);
+    }
+  }, []);
+
+  const removeFavorite = useCallback(async (foodId: string) => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return;
+
+      await fetch(`http://localhost:5000/api/nutrition/foods/favorites/${foodId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+    }
+  }, []);
+
+  const getRecents = useCallback(async (): Promise<FoodItem[]> => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return [];
+
+      const response = await fetch('http://localhost:5000/api/nutrition/foods/recent', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+      return [];
+    } catch (error) {
+      console.error('Error getting recents:', error);
+      return [];
+    }
+  }, []);
+
+  const addRecent = useCallback(async (foodId: string) => {
+    try {
+      const token = localStorage.getItem('gymbot_token');
+      if (!token) return;
+
+      await fetch('http://localhost:5000/api/nutrition/foods/recent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ foodId }),
+      });
+    } catch (error) {
+      console.error('Error adding recent:', error);
     }
   }, []);
 
@@ -869,8 +1049,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         validatedMeals,
         validateWorkout,
         validateNutrition,
+        updateValidatedNutrition,
         deleteValidatedWorkout,
         deleteValidatedNutrition,
+        updateProfile,
+        searchFoods,
+        getFavorites,
+        addFavorite,
+        removeFavorite,
+        getRecents,
+        addRecent,
         workoutSchedule,
         scheduleWorkout,
         unscheduleWorkout,
