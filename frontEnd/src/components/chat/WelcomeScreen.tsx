@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { Dumbbell, Calculator, BookOpen, Target, Utensils, Heart } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import LiquidEther from '../ui/LiquidEther';
+import PixelCard from '../ui/PixelCard';
 
 const SUGGESTED_PROMPTS = [
   { title: 'Create a Push Pull Legs routine', icon: Dumbbell, color: 'green' },
@@ -31,13 +33,33 @@ export function WelcomeScreen() {
 
   return (
     <motion.div
-      className="flex flex-col items-center justify-center h-full p-4 sm:p-8"
+      className="relative flex flex-col items-center justify-center h-full p-4 sm:p-8 overflow-hidden"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
+      <div className="absolute inset-0 z-0">
+        <LiquidEther
+          colors={[ '#5227FF', '#FF9FFC', '#B497CF' ]}
+          mouseForce={20}
+          cursorSize={100}
+          isViscous
+          viscous={30}
+          iterationsViscous={32}
+          iterationsPoisson={32}
+          resolution={0.5}
+          isBounce={false}
+          autoDemo
+          autoSpeed={0.5}
+          autoIntensity={2.2}
+          takeoverDuration={0.25}
+          autoResumeDelay={3000}
+          autoRampDuration={0.6}
+        />
+      </div>
+
       <motion.div
-        className="relative mb-8"
+        className="relative z-10 mb-8"
         variants={itemVariants}
       >
         <motion.div
@@ -94,45 +116,42 @@ export function WelcomeScreen() {
         </div>
       </motion.div>
 
-      <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="relative z-10 w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-3">
         {SUGGESTED_PROMPTS.map((prompt) => (
-          <motion.button
+          <motion.div
             key={prompt.title}
             variants={itemVariants}
-            className="group relative bg-dark-800/50 hover:bg-dark-800 border border-dark-700 hover:border-accent-green/30 rounded-xl p-4 text-left transition-all duration-300"
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => sendMessage(prompt.title)}
+            className="w-full"
           >
-            <motion.div
-              className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{
-                background: prompt.color === 'green'
-                  ? 'radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.1), transparent 70%)'
-                  : 'radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.1), transparent 70%)',
-              }}
-            />
-            <div className="relative flex items-start gap-3">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                prompt.color === 'green'
-                  ? 'bg-accent-green/20 text-accent-green'
-                  : 'bg-accent-blue/20 text-accent-blue'
-              }`}>
-                <prompt.icon className="w-5 h-5" />
+            <PixelCard
+              variant="ether"
+              onClick={() => sendMessage(prompt.title)}
+              className="group w-full h-full bg-dark-800/50 hover:bg-dark-800/80 border-dark-700 hover:border-dark-600 p-4 text-left transition-all duration-300"
+            >
+              <div className="relative flex items-start gap-3">
+                <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+                  prompt.color === 'green'
+                    ? 'bg-accent-green/20 text-accent-green'
+                    : 'bg-accent-blue/20 text-accent-blue'
+                }`}>
+                  <prompt.icon className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0 pt-1">
+                  <span className="text-sm font-medium text-white group-hover:text-accent-green transition-colors line-clamp-2">
+                    {prompt.title}
+                  </span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0 pt-1">
-                <span className="text-sm font-medium text-white group-hover:text-accent-green transition-colors line-clamp-2">
-                  {prompt.title}
-                </span>
-              </div>
-            </div>
-          </motion.button>
+            </PixelCard>
+          </motion.div>
         ))}
       </div>
 
       <motion.div
         variants={itemVariants}
-        className="mt-8 flex items-center gap-2 text-dark-500 text-sm"
+        className="relative z-10 mt-8 flex items-center gap-2 text-dark-500 text-sm"
       >
         <div className="w-2 h-2 bg-accent-green rounded-full animate-pulse" />
         <span>Powered by AI</span>
@@ -140,3 +159,5 @@ export function WelcomeScreen() {
     </motion.div>
   );
 }
+
+
